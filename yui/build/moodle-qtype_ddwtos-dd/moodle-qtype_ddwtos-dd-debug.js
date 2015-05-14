@@ -34,6 +34,7 @@ var DDWTOS_DD = function() {
  */
 Y.extend(DDWTOS_DD, Y.Base, {
     selectors : null,
+    touchScrollDisable: null,
     initializer : function() {
         var pendingid = 'qtype_ddwtos-' + Math.random().toString(36).slice(2); // Random string.
         M.util.js_pending(pendingid);
@@ -205,11 +206,15 @@ Y.extend(DDWTOS_DD, Y.Base, {
         }
     },
     make_draggable : function (drag) {
-        new Y.DD.Drag({
+        var dd = new Y.DD.Drag({
             node: drag,
             groups: [this.get_group(drag)],
             dragMode: 'point'
         }).plug(Y.Plugin.DDConstrained, {constrain2node: this.selectors.top_node()});
+
+        // Prevent scrolling whilst dragging on Adroid devices.
+        dd.on('drag:start', this.disableTouchScrolling, this);
+        dd.on('drag:end', this.enableTouchScrolling, this);
     },
     make_drop_zones : function () {
         Y.all(this.selectors.drops()).each(this.make_drop_zone, this);
@@ -332,6 +337,21 @@ Y.extend(DDWTOS_DD, Y.Base, {
         var inputid = this.get('inputids')[this.get_place(drop)];
         var inputnode = Y.one('input#' + inputid);
         return Number(inputnode.get('value'));
+    },
+    // Prevent scrolling whilst dragging elements on Android devices.
+    disableTouchScrolling: function() {
+        if (this.touchScrollDisable) {
+            return; // Already disabled.
+        }
+        this.touchScrollDisable = Y.one('body').on('touchmove', function(e) {
+            e.preventDefault();
+        });
+    },
+    enableTouchScrolling: function() {
+        if (this.touchScrollDisable) {
+            this.touchScrollDisable.detach();
+            this.touchScrollDisable = null;
+        }
     }
 }, {
     NAME : DDWTOSDDNAME,
